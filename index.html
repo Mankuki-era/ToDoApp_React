@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>React ToDoApp</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/react@16/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+  <!-- Don't use this in production: -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+  (() => {
+    const todos = [];
+    
+    function TodoForm(props) {
+      return(
+        <form onSubmit={props.addTodo} className="box">
+          <input type="text" value={props.item} onChange={props.updateItem}/>
+          <input type="submit" value="追加"/>
+        </form>
+      );
+    }
+
+    function SubButton(props) {
+      return(
+        <div className="btnGroup">
+          <div className="selectBtn">
+            <p>表示するタスク</p>
+            <select value={props.filter} onChange={props.showTask}>
+              <option value="all">全て</option>
+              <option value="comp">完了済み</option>
+              <option value="yet">未完了</option>
+            </select>
+          </div>
+          <button onClick={props.selectAll}>全選択</button>
+          <button onClick={props.releaseAll}>全ての選択を解除</button>
+          <button onClick={props.purge}>完了済みを削除</button>
+        </div>
+      );
+    }
+
+    function TodoContent(props) {
+      const remaining = props.originTodos.filter(todo => {
+        return !todo.isDone;
+      });
+      return(
+        <div className="subContent">
+          <div className="showAmount">
+            <p>総タスク数:{props.originTodos.length}<br/>
+              未完了数:{remaining.length}</p>
+          </div>
+          <SubButton selectAll={props.selectAll} releaseAll={props.releaseAll} filter={props.filter} showTask={props.showTask} purge={props.purge}/>
+        </div>
+      );
+    }
+
+    function NavBar() {
+      return(
+        <div className="navBar">
+          <div>✔️</div>
+          <div>タスク</div>
+          <div>追加時刻</div>
+          <div>編集</div>
+          <div>削除</div>
+        </div>
+      );
+    }
+
+    function EditForm(props) {
+      return(
+        <form className="editContent">
+          <input type="text" value={props.editTitle} onChange={props.editItem}/>
+          <button onClick={e => props.setEdit(e, props.todo, false, true)}>更新</button>
+          <button onClick={e => props.setEdit(e, props.todo, false, false)}>キャンセル</button>
+        </form>
+      );
+    }
+
+    function TodoItem(props) {
+      return(
+        <li>
+          <label>
+            <input type="checkbox" checked={props.todo.isDone} onClick={() => props.checkTodo(props.todo)}/>
+            <div className={props.todo.isDone&&props.editAble ? 'done' : ''}>
+              {props.todo.editStatus ? <EditForm editTodo={props.editTodo} todo={props.todo} editTitle={props.editTitle} editItem={props.editItem} setEdit={props.setEdit}/> : props.todo.title}
+            </div>
+            <div className={props.todo.isDone ? 'done' : ''}>{props.todo.time}</div>
+            <div>
+              <button onClick={e => {
+                if(props.editAble){
+                  props.setEdit(e, props.todo, true, false);
+                }
+                else {
+                  alert('タスクの編集を完了してください');
+                }
+                }}>編集</button>
+            </div>
+            <div>
+              <button onClick={() => props.deleteTodo(props.todo)}>削除</button>
+            </div>
+          </label>
+        </li>
+      );
+    }
+
+    function TodoList(props) {
+      const todos = props.todos.map(todo => {
+        return (
+          <TodoItem key={todo.id} todo={todo} checkTodo={props.checkTodo} editTodo={props.editTodo} editTitle={props.editTitle} editItem={props.editItem} setEdit={props.setEdit} editAble={props.editAble} deleteTodo={props.deleteTodo}/>
+        );
+      });
+      return(
+        <div className="listContainer">
+          <NavBar/>
+          <ul className="listArea">
+            {props.todos.length ? todos : <li className="list">タスクはありません</li>}
+          </ul>
+        </div>
+      );
+    }
+
+    function TodoContena(props) {
+      return(
+        <div className="mainContainer">
+          <TodoContent todos={props.todos} originTodos={props.originTodos} selectAll={props.selectAll} releaseAll={props.releaseAll} filter={props.filter} showTask={props.showTask} purge={props.purge}/>
+          <TodoList todos={props.todos} checkTodo={props.checkTodo} editTodo={props.editTodo} editTitle={props.editTitle} editItem={props.editItem} setEdit={props.setEdit} editAble={props.editAble} deleteTodo={props.deleteTodo}/>
+        </div>
+      );
+    }
+
+    function getUniqueId() {
+      return new Date().getTime.toString(36) + '-' + Math.random().toString(36);
+    }
+
+    function getCurrenttime(d) {
+      return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
+    }
+
+    class App extends React.Component {
+      constructor() {
+        super();
+        this.state = {
+          todos: todos,
+          item: '',
+          filter: 'all',
+          editTitle: '',
+          editAble: true
+        };
+        this.checkTodo = this.checkTodo.bind(this);
+        this.setEdit = this.setEdit.bind(this);
+        this.deleteTodo = this.deleteTodo.bind(this);
+        this.updateItem = this.updateItem.bind(this);
+        this.addTodo = this.addTodo.bind(this);
+        this.selectAll = this.selectAll.bind(this);
+        this.releaseAll = this.releaseAll.bind(this);
+        this.showTask = this.showTask.bind(this);
+        this.editItem = this.editItem.bind(this);
+        this.purge = this.purge.bind(this);
+      }
+
+      checkTodo(todo) {
+        const todos = this.state.todos.map(todo => {
+          return {id: todo.id, title: todo.title, time: todo.time,  isDone: todo.isDone};
+        });
+        const pos = todos.map(todo => {
+          return todo.id;
+        }).indexOf(todo.id);
+        todos[pos].isDone = !todos[pos].isDone;
+        this.setState({
+          todos: todos,
+        });
+      }
+
+      setEdit(e, todo, check, update) {
+        e.preventDefault();
+        let editAble;
+        const todos = this.state.todos.map(todo => {
+          return {id: todo.id, title: todo.title, time: todo.time,  isDone: todo.isDone, editStatus: todo.editStatus};
+        });
+        const pos = todos.map(todo => {
+          return todo.id;
+        }).indexOf(todo.id);
+
+        if(check === true) {
+          todos[pos].editStatus = true;
+          editAble = false;
+        }
+        else {
+          if(update === true){
+            todos[pos].title = this.state.editTitle;
+          }
+          todos[pos].editStatus = false;
+          editAble = true;
+        }
+        this.setState({
+          todos: todos,
+          editTitle: todos[pos].title,
+          editAble: editAble
+        });
+      }
+
+      editItem(e) {
+        this.setState({
+          editTitle: e.target.value
+        });
+      }
+
+      deleteTodo(todo) {
+        if(!confirm('本当に削除しますか？')){
+          return;
+        }
+
+        const todos = this.state.todos.slice();
+        const pos = this.state.todos.indexOf(todo);
+
+        todos.splice(pos, 1);
+        this.setState({
+          todos: todos
+        });
+      }
+
+      selectAll() {
+        const todos = this.state.todos.map(todo => {
+          return {id: todo.id, title: todo.title, time: todo.time,  isDone: true};
+        });
+        this.setState({
+          todos: todos
+        });
+      }
+
+      releaseAll() {
+        const todos = this.state.todos.map(todo => {
+          return {id: todo.id, title: todo.title, time: todo.time,  isDone: false};
+        });
+        this.setState({
+          todos: todos
+        });
+      }
+
+      showTask(e) {
+        this.setState({
+          filter: e.target.value
+        });
+      }
+
+      purge() {
+        if(!confirm('完了済みのタスクを全て削除しますか？')) {
+          return;
+        }
+
+        const todos = this.state.todos.filter(todo => {
+          return !todo.isDone;
+        });
+
+        this.setState({
+          todos: todos
+        });
+      }
+
+      updateItem(e) {
+        this.setState({
+          item: e.target.value
+        });
+      }
+
+      // ローカルストレージに保存
+      // componentDidUpdate() {
+      //   localStorage.setItem('todos', JSON.stringify(this.state.todos));
+      // }
+
+      // componentDidMount() {
+      //   this.setState({
+      //     todos: JSON.parse(localStorage.getItem('todos')) || []
+      //   });
+      // }
+
+      addTodo(e) {
+        e.preventDefault();
+        if(this.state.item.trim() === '') {
+          return;
+        }
+        const d = new Date();
+        const item = {
+          id: getUniqueId(),
+          title: this.state.item,
+          time: getCurrenttime(d),
+          isDone: false,
+          editStatus: false,
+          edtitle: this.state.editTitle
+        };
+        const todos = this.state.todos.slice();
+        todos.push(item);
+        this.setState({
+          todos: todos,
+          item: '',
+          editTitle: ''
+        });
+      }
+
+      render() {
+        const filteredTodos = this.state.todos.filter(todo => {
+          switch(this.state.filter) {
+            case 'all':
+              return true;
+            case 'comp':
+              return todo.isDone;
+            case 'yet':
+              return !todo.isDone;
+            default:
+              return true;
+          }
+        });
+        return(
+          <div className="container">
+            <h1>タスク管理アプリ</h1>
+            <TodoForm item={this.state.item} updateItem={this.updateItem} addTodo={this.addTodo}/>
+            <TodoContena todos={filteredTodos} originTodos={this.state.todos} checkTodo={this.checkTodo} editTodo={this.editTodo} editTitle={this.state.editTitle} editItem={this.editItem} setEdit={this.setEdit} editAble={this.state.editAble} deleteTodo={this.deleteTodo} selectAll={this.selectAll} releaseAll={this.releaseAll} filter={this.state.filter} showTask={this.showTask} purge={this.purge}/>  
+          </div>
+        );
+      }
+    }
+    ReactDOM.render(
+      <App/>,
+      document.getElementById('root')
+    );
+  })();
+  </script>
+</body>
+</html>
